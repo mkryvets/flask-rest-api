@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 import os
 
+
 # Init app
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -110,6 +111,7 @@ class Department(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     hospital_id = db.Column(db.Integer, db.ForeignKey('hospital.id'))
+    doctors = db.relationship('Doctor', cascade='all,delete', backref='department')
 
     def __init__(self, name, hospital_id):
         self.name = name
@@ -179,6 +181,97 @@ def delete_department(id):
     db.session.delete(department)
     db.session.commit()
     return department_schema.jsonify(department)
+
+
+# Doctor Class/Model
+class Doctor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    birth_year = db.Column(db.Integer, nullable=False)
+    start_year = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(100), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('department.id'))
+
+    def __init__(self, name, birth_year, start_year, gender, department_id):
+        self.name = name
+        self.birth_year = birth_year
+        self.start_year = start_year
+        self.gender = gender
+        self.department_id = department_id
+
+
+# Doctor Schema
+class DoctorSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'name', 'birth_year', 'start_year', 'gender', 'department_id')
+
+
+# Doctor schema initialization
+doctor_schema = DoctorSchema()
+doctors_schema = DoctorSchema(many=True)
+
+
+# Create a Doctor
+@app.route('/doctor', methods=['POST'])
+def app_doctor():
+    name = request.json['name']
+    birth_year = request.json['birth_year']
+    start_year = request.json['start_year']
+    gender = request.json['gender']
+    department_id = request.json['department_id']
+
+    new_doctor = Doctor(name, birth_year, start_year, gender, department_id)
+
+    db.session.add(new_doctor)
+    db.session.commit()
+
+    return doctor_schema.jsonify(new_doctor)
+
+
+# Get All Doctors
+@app.route('/doctor', methods=['GET'])
+def get_doctors():
+    all_doctors = Doctor.query.all()
+    result = doctors_schema.dump(all_doctors)
+    return jsonify(result.data)
+
+
+# Get Single Doctor
+@app.route('/doctor/<id>', methods=['GET'])
+def get_doctor(id):
+    doctor = Doctor.query.get(id)
+    return doctor_schema.jsonify(doctor)
+
+
+# Update a Doctor
+@app.route('/doctor/<id>', methods=['PUT'])
+def update_doctor(id):
+    doctor = Doctor.query.get(id)
+
+    name = request.json['name']
+    birth_year = request.json['birth_year']
+    start_year = request.json['start_year']
+    gender = request.json['gender']
+    department_id = request.json['department_id']
+
+    doctor.name = name
+    doctor.birth_year = birth_year
+    doctor.start_year = start_year
+    doctor.gender = gender
+    doctor.department_id = department_id
+
+    db.session.commit()
+
+    return doctor_schema.jsonify(doctor)
+
+
+# Delete Doctor
+@app.route('/doctor/<id>', methods=['DELETE'])
+def delete_doctor(id):
+    doctor = Doctor.query.get(id)
+    db.session.delete(doctor)
+    db.session.commit()
+    return doctor_schema.jsonify(doctor)
 
 
 # Run server
