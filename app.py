@@ -54,6 +54,18 @@ def app_hospital():
     adress = request.json['adress']
     capacity = request.json['capacity']
 
+    error_message1 = 'The foundation year must be between 1500 and 2020'
+    if ((foundation_year > 2020) or (foundation_year < 1500)):
+        return error_message1
+    error_message2 = 'The capacity must be between 1 and 5000'
+    if ((capacity > 5000) or (capacity < 1)):
+        return error_message2
+    error_message3 = 'Hospital with this adress already exists'
+    hospitals = Hospital.query.all()
+    for h in hospitals:
+        if (h.adress == adress):
+            return error_message3
+
     new_hospital = Hospital(name, foundation_year, adress, capacity)
 
     db.session.add(new_hospital)
@@ -86,6 +98,18 @@ def update_hospital(id):
     foundation_year = request.json['foundation_year']
     adress = request.json['adress']
     capacity = request.json['capacity']
+
+    error_message1 = 'The foundation year must be between 1500 and 2020'
+    if ((foundation_year > 2020) or (foundation_year < 1500)):
+        return error_message1
+    error_message2 = 'The capacity must be between 1 and 5000'
+    if ((capacity > 5000) or (capacity < 1)):
+        return error_message2
+    error_message3 = 'Hospital with this adress already exists'
+    hospitals = Hospital.query.all()
+    for h in hospitals:
+        if (h.adress == adress):
+            return error_message3
 
     hospital.name = name
     hospital.foundation_year = foundation_year
