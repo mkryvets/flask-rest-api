@@ -26,7 +26,7 @@ class Hospital(db.Model):
     foundation_year = db.Column(db.Integer, nullable=False)
     adress = db.Column(db.String(100), unique=True, nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
-    departments = db.relationship('Department', cascade='all,delete', backref='hospital')
+    departments = db.relationship('Department', cascade='all,delete', backref='Hospital')
 
     def __init__(self, name, foundation_year, adress, capacity):
         self.name = name
@@ -111,7 +111,7 @@ class Department(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     hospital_id = db.Column(db.Integer, db.ForeignKey('hospital.id'))
-    doctors = db.relationship('Doctor', cascade='all,delete', backref='department')
+    doctors = db.relationship('Doctor', cascade='all,delete', backref='Department')
 
     def __init__(self, name, hospital_id):
         self.name = name
@@ -183,6 +183,13 @@ def delete_department(id):
     return department_schema.jsonify(department)
 
 
+# Treatment Table
+Treatment = db.Table('Treatment',
+    db.Column('doctor_id', db.Integer, db.ForeignKey('doctor.id')),
+    db.Column('patient_id', db.Integer, db.ForeignKey('patient.id'))
+)
+
+
 # Doctor Class/Model
 class Doctor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -191,6 +198,7 @@ class Doctor(db.Model):
     start_year = db.Column(db.Integer, nullable=False)
     gender = db.Column(db.String(100), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'))
+    patients = db.relationship('Patient', cascade='all,delete', secondary=Treatment)
 
     def __init__(self, name, birth_year, start_year, gender, department_id):
         self.name = name
@@ -272,6 +280,97 @@ def delete_doctor(id):
     db.session.delete(doctor)
     db.session.commit()
     return doctor_schema.jsonify(doctor)
+
+
+# Patient Class/Model
+class Patient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    birth_year = db.Column(db.Integer, nullable=False)
+    weight = db.Column(db.Integer, nullable=False)
+    height = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(100), nullable=False)
+
+    def __init__(self, name, birth_year, weight, height, gender):
+        self.name = name
+        self.birth_year = birth_year
+        self.weight = weight
+        self.height = height
+        self.gender = gender
+
+
+# Patient Schema
+class PatientSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'name', 'birth_year', 'weight', 'height', 'gender')
+
+
+# Patient schema initialization
+patient_schema = PatientSchema()
+patients_schema = PatientSchema(many=True)
+
+
+# Create a Patient
+@app.route('/patient', methods=['POST'])
+def app_patient():
+    name = request.json['name']
+    birth_year = request.json['birth_year']
+    weight = request.json['weight']
+    height = request.json['height']
+    gender = request.json['gender']
+
+    new_patient = Patient(name, birth_year, weight, height, gender)
+
+    db.session.add(new_patient)
+    db.session.commit()
+
+    return patient_schema.jsonify(new_patient)
+
+
+# Get All Patients
+@app.route('/patient', methods=['GET'])
+def get_patients():
+    all_patients = Patient.query.all()
+    result = patients_schema.dump(all_patients)
+    return jsonify(result.data)
+
+
+# Get Single Patient
+@app.route('/patient/<id>', methods=['GET'])
+def get_patient(id):
+    patient = Patient.query.get(id)
+    return patient_schema.jsonify(patient)
+
+
+# Update a Patient
+@app.route('/patient/<id>', methods=['PUT'])
+def update_patient(id):
+    patient = Patient.query.get(id)
+
+    name = request.json['name']
+    birth_year = request.json['birth_year']
+    weight = request.json['weight']
+    height = request.json['height']
+    gender = request.json['gender']
+
+    patient.name = name
+    patient.birth_year = birth_year
+    patient.weight = weight
+    patient.height = height
+    patient.gender = gender
+
+    db.session.commit()
+
+    return patient_schema.jsonify(patient)
+
+
+# Delete Patient
+@app.route('/patient/<id>', methods=['DELETE'])
+def delete_patient(id):
+    patient = Patient.query.get(id)
+    db.session.delete(patient)
+    db.session.commit()
+    return patient_schema.jsonify(patient)
 
 
 # Run server
